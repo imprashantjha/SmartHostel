@@ -13,10 +13,6 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-/**
- * COMMIT 2: Room Management & Inventory
- * Implements Add Room logic, Room Listing, Filtering, and LocalStorage persistence.
- */
 const App = () => {
   // --- State Management ---
   const [rooms, setRooms] = useState(() => {
@@ -43,7 +39,14 @@ const App = () => {
     needsWashroom: false,
   });
 
-  // --- Persistence ---
+  // Allocation State
+  const [allocationInput, setAllocationInput] = useState({
+    students: "",
+    needsAC: false,
+    needsWashroom: false,
+  });
+  const [allocationResult, setAllocationResult] = useState(null);
+
   useEffect(() => {
     localStorage.setItem("hostel_rooms", JSON.stringify(rooms));
   }, [rooms]);
@@ -94,6 +97,41 @@ const App = () => {
     });
   }, [rooms, searchFilter]);
 
+  // --- Logic: Allocate Room (Core Requirement) ---
+  const allocateRoom = (e) => {
+    e.preventDefault();
+    setAllocationResult(null);
+
+    const students = parseInt(allocationInput.students);
+    const needsAC = allocationInput.needsAC;
+    const needsWashroom = allocationInput.needsWashroom;
+
+    if (!students || students <= 0) {
+      setAllocationResult({
+        status: "error",
+        message: "Please enter a valid number of students.",
+      });
+      return;
+    }
+
+    // Filter rooms by criteria and then pick the smallest capacity
+    const suitableRooms = rooms.filter(
+      (r) =>
+        r.capacity >= students &&
+        r.hasAC === needsAC &&
+        r.hasAttachedWashroom === needsWashroom,
+    );
+
+    if (suitableRooms.length === 0) {
+      setAllocationResult({ status: "fail", message: "No room available" });
+    } else {
+      // Sort by capacity (ascending) to find the SMALLEST possible room
+      suitableRooms.sort((a, b) => a.capacity - b.capacity);
+      const bestRoom = suitableRooms[0];
+      setAllocationResult({ status: "success", data: bestRoom });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
       {/* Navigation Header */}
@@ -101,26 +139,26 @@ const App = () => {
         <div className="max-w-5xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
             <Bed className="w-8 h-8" />
-            <h1 className="text-2xl font-bold tracking-tight">HostelSmart</h1>
+            <h1 className="text-2xl font-bold tracking-tight">SmartHostel</h1>
           </div>
           <div className="flex bg-indigo-800/50 p-1 rounded-lg">
             <button
               onClick={() => setActiveTab("add")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${activeTab === "add" ? "bg-white text-indigo-700 shadow-sm" : "hover:bg-indigo-600"}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all cursor-pointer ${activeTab === "add" ? "bg-white text-indigo-700 shadow-sm" : "hover:bg-indigo-600"}`}
             >
               <PlusCircle size={18} /> Add Room
             </button>
             <button
               onClick={() => setActiveTab("list")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${activeTab === "list" ? "bg-white text-indigo-700 shadow-sm" : "hover:bg-indigo-600"}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all cursor-pointer ${activeTab === "list" ? "bg-white text-indigo-700 shadow-sm" : "hover:bg-indigo-600"}`}
             >
               <List size={18} /> View Rooms
             </button>
             <button
               onClick={() => setActiveTab("allocate")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${activeTab === "allocate" ? "bg-white text-indigo-700 shadow-sm" : "hover:bg-indigo-600"}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all cursor-pointer ${activeTab === "allocate" ? "bg-white text-indigo-700 shadow-sm" : "hover:bg-indigo-600"}`}
             >
-              <Search size={18} /> Allocate
+              <Search size={18} /> Allocate Rooms
             </button>
           </div>
         </div>
@@ -235,7 +273,7 @@ const App = () => {
               <div className="md:col-span-2 pt-4">
                 <button
                   type="submit"
-                  className="w-full md:w-auto px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 active:scale-95 transition-all shadow-md shadow-indigo-100"
+                  className="w-full md:w-auto px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 active:scale-95 transition-all shadow-md shadow-indigo-100 cursor-pointer"
                 >
                   Save Room Details
                 </button>
@@ -252,7 +290,6 @@ const App = () => {
                 <List className="text-indigo-600" /> Hostel Room Inventory
               </h2>
 
-              {/* Internal Filtering UI */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-slate-50 p-4 rounded-lg border border-slate-200">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500 uppercase">
@@ -275,7 +312,7 @@ const App = () => {
                   <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
                     <input
                       type="checkbox"
-                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                       checked={searchFilter.needsAC}
                       onChange={(e) =>
                         setSearchFilter({
@@ -289,7 +326,7 @@ const App = () => {
                   <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
                     <input
                       type="checkbox"
-                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                       checked={searchFilter.needsWashroom}
                       onChange={(e) =>
                         setSearchFilter({
@@ -298,7 +335,7 @@ const App = () => {
                         })
                       }
                     />{" "}
-                    With Washroom
+                    Attached Washroom
                   </label>
                 </div>
                 <div className="flex items-end justify-end">
@@ -310,7 +347,7 @@ const App = () => {
                         needsWashroom: false,
                       })
                     }
-                    className="text-xs text-indigo-600 hover:underline"
+                    className="text-xs text-indigo-600 hover:underline cursor-pointer"
                   >
                     Reset Filters
                   </button>
@@ -326,7 +363,7 @@ const App = () => {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 text-slate-500 text-sm">
-                        <th className="py-4 px-4 font-semibold">Room No</th>
+                        <th className="py-4 px-4 font-semibold">Room No.</th>
                         <th className="py-4 px-4 font-semibold">Capacity</th>
                         <th className="py-4 px-4 font-semibold">Features</th>
                         <th className="py-4 px-4 font-semibold text-right">
@@ -355,7 +392,7 @@ const App = () => {
                               )}
                               {room.hasAttachedWashroom && (
                                 <span className="bg-emerald-50 text-emerald-700 text-xs px-2 py-1 rounded border border-emerald-100">
-                                  Washroom
+                                  Attached Washroom
                                 </span>
                               )}
                             </div>
@@ -365,7 +402,8 @@ const App = () => {
                               onClick={() =>
                                 setRooms(rooms.filter((r) => r.id !== room.id))
                               }
-                              className="text-red-400 hover:text-red-600"
+                              className="text-red-400 hover:text-red-600 cursor-pointer p-1"
+                              title="Delete Room"
                             >
                               <XCircle size={18} />
                             </button>
@@ -380,22 +418,152 @@ const App = () => {
           </div>
         )}
 
-        {/* ALLOCATION PLACEHOLDER FOR COMMIT 2 */}
+        {/* SEARCH AND ALLOCATE SCREEN */}
         {activeTab === "allocate" && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
-            <h2 className="text-xl font-semibold mb-2 flex items-center justify-center gap-2">
-              <Search className="text-indigo-600" /> Allocate Room
-            </h2>
-            <p className="text-slate-500 italic">
-              The Smart Allocation algorithm and output panel will be
-              implemented in the final commit.
-            </p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4">
+            {/* Allocation Form */}
+            <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <Search className="text-indigo-600" /> Allocate Rooms
+              </h2>
+              <form onSubmit={allocateRoom} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Number of Students
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Enter group size"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                    value={allocationInput.students}
+                    onChange={(e) =>
+                      setAllocationInput({
+                        ...allocationInput,
+                        students: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-4 pt-2">
+                  <label className="flex items-center justify-between group cursor-pointer">
+                    <span className="text-sm text-slate-600">Requires AC</span>
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-indigo-600 rounded cursor-pointer"
+                      checked={allocationInput.needsAC}
+                      onChange={(e) =>
+                        setAllocationInput({
+                          ...allocationInput,
+                          needsAC: e.target.checked,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="flex items-center justify-between group cursor-pointer">
+                    <span className="text-sm text-slate-600">
+                      Attached Washroom
+                    </span>
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-indigo-600 rounded cursor-pointer"
+                      checked={allocationInput.needsWashroom}
+                      onChange={(e) =>
+                        setAllocationInput({
+                          ...allocationInput,
+                          needsWashroom: e.target.checked,
+                        })
+                      }
+                    />
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <CheckCircle2 size={18} /> Allocate Rooms
+                </button>
+              </form>
+            </div>
+
+            {/* Output Display Panel */}
+            <div className="lg:col-span-2">
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[400px] flex flex-col">
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-6">
+                  Allocation Output
+                </h3>
+
+                {!allocationResult ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-slate-400 text-center space-y-3">
+                    <Search size={48} strokeWidth={1} />
+                    <p>
+                      Enter requirements on the left to find the <br />
+                      <strong>smallest possible matching room</strong>.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex-1">
+                    {allocationResult.status === "success" ? (
+                      <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-8 text-center space-y-4 animate-in zoom-in-95 duration-200">
+                        <div className="mx-auto w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
+                          <CheckCircle2 size={32} />
+                        </div>
+                        <h4 className="text-2xl font-bold text-emerald-900">
+                          Room Allocated!
+                        </h4>
+                        <div className="bg-white rounded-lg p-6 shadow-sm border border-emerald-200 inline-block">
+                          <p className="text-slate-500 text-sm mb-1 uppercase tracking-widest">
+                            Selected Room
+                          </p>
+                          <p className="text-4xl font-black text-indigo-600">
+                            {allocationResult.data.roomNo}
+                          </p>
+                          <div className="mt-4 flex justify-center gap-3">
+                            <span className="px-3 py-1 bg-slate-100 rounded text-xs text-slate-600 font-bold">
+                              {allocationResult.data.capacity} Capacity
+                            </span>
+                            {allocationResult.data.hasAC && (
+                              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs font-bold">
+                                AC
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-emerald-700 text-sm">
+                          Optimal match found based on capacity and facilities.
+                        </p>
+                      </div>
+                    ) : allocationResult.status === "fail" ? (
+                      <div className="bg-red-50 border border-red-100 rounded-xl p-8 text-center space-y-4">
+                        <div className="mx-auto w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                          <XCircle size={32} />
+                        </div>
+                        <h4 className="text-2xl font-bold text-red-900">
+                          No room available
+                        </h4>
+                        <p className="text-red-700">
+                          Try adjusting your requirements or adding more rooms
+                          to inventory.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="bg-amber-50 border border-amber-100 rounded-xl p-8 text-center">
+                        <p className="text-amber-700 font-medium">
+                          {allocationResult.message}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </main>
 
       <footer className="mt-12 py-8 text-center text-slate-400 text-sm">
-        Hostel Room Allocation System - Commit 2: Room Management
+        Hostel Room Allocation System
       </footer>
     </div>
   );
